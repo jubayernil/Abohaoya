@@ -19,6 +19,7 @@ public class Weather {
     @SerializedName("icon")
     @Expose
     private String icon;
+    private String iconUrl = "http://openweathermap.org/img/w/";
 
     /**
      * @return The id
@@ -66,6 +67,9 @@ public class Weather {
      * @return The icon
      */
     public String getIcon() {
+        iconUrl = "http://openweathermap.org/img/w/";
+        String iconType = ".png";
+        icon = iconUrl + icon + iconType;
         return icon;
     }
 

@@ -37,6 +37,7 @@ public class WeatherList {
     @Expose
     private Double rain;
 
+
     /**
      *
      * @return
@@ -126,6 +127,7 @@ public class WeatherList {
     public void setWeather(java.util.List<Weather> weather) {
         this.weather = weather;
     }
+
 
     /**
      *

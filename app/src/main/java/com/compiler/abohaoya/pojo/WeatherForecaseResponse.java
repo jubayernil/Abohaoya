@@ -3,7 +3,10 @@ package com.compiler.abohaoya.pojo;
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
+import java.util.TimeZone;
 
 /**
  * Created by User on 8/8/2016.
@@ -113,6 +116,14 @@ public class WeatherForecaseResponse {
      */
     public void setList(java.util.List<WeatherList> list) {
         this.list = list;
+    }
+
+    public String getCurrentTime() {
+        WeatherList weatherList = new WeatherList();
+        SimpleDateFormat sdf = new SimpleDateFormat("hh:mm:ssa");
+        sdf.setTimeZone(TimeZone.getTimeZone("GMT+6"));
+        String currentTime = sdf.format(new Date(weatherList.getDt() * 1000));
+        return currentTime;
     }
 
 }

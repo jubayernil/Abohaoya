@@ -5,20 +5,23 @@ import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.os.Build;
-import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.ArrayAdapter;
 import android.widget.EditText;
+import android.widget.ImageButton;
 import android.widget.ImageView;
+import android.widget.ListView;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.ToggleButton;
 
+import com.compiler.abohaoya.Adapter.ForcrastListAdapter;
 import com.compiler.abohaoya.R;
 import com.compiler.abohaoya.model.City;
 import com.compiler.abohaoya.model.WeatherPreference;
@@ -32,6 +35,7 @@ import com.squareup.picasso.Picasso;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.TimeZone;
 
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -40,6 +44,9 @@ import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
 
 public class MainActivity extends AppCompatActivity {
+    ToggleButton temtogglebutton;
+    WeatherPreference weatherPreference;
+    ForcrastListAdapter adapter;
     private TextView cityNameTextView;
     private TextView tempTextView;
     private TextView degreeTextView;
@@ -50,12 +57,10 @@ public class MainActivity extends AppCompatActivity {
     private TextView sunRiseTextView;
     private TextView sunSetTextView;
     private ImageView skyImageView;
-    ToggleButton temtogglebutton;
-
-    WeatherPreference weatherPreference;
+    private ImageButton findLocationBtn;
+    private ListView forcrastListView;
     private String cityName;
     private String tempUnit;
-
     private WeatherServiceApi weatherServiceApi;
 
 
@@ -66,7 +71,7 @@ public class MainActivity extends AppCompatActivity {
 
 
         weatherPreference = new WeatherPreference(MainActivity.this);
-
+        findLocationBtn = (ImageButton) findViewById(R.id.findLocationBtn);
         cityNameTextView = (TextView) findViewById(R.id.cityNameTextView);
         tempTextView = (TextView) findViewById(R.id.tempTextView);
         degreeTextView = (TextView) findViewById(R.id.degreeTextView);
@@ -79,24 +84,29 @@ public class MainActivity extends AppCompatActivity {
         skyImageView = (ImageView) findViewById(R.id.skyImageView);
         temtogglebutton = (ToggleButton) findViewById(R.id.temtogglebutton);
 
+        forcrastListView = (ListView) findViewById(R.id.forcrastListView);
+
         temtogglebutton.setTextOff((char) 0x00B0 + "C");
         temtogglebutton.setTextOn((char) 0x00B0 + "F");
         temtogglebutton.setText((char) 0x00B0 + "C");
 
-        //get city input from city name click
-        cityNameTextView.setOnClickListener(new View.OnClickListener() {
+        //TODO: get city input from city name click
+        findLocationBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 showChangeLangDialog();
             }
         });
-        //end of city name click get city
 
 
         if (weatherPreference.getTempUnit() == null) {
             weatherPreference.setTempUnit(Constant.CELSIUS_UNIT);
+            weatherPreference.setCityName("Dhaka");
         }
-        Toast.makeText(MainActivity.this, "OnCreate: " + weatherPreference.getTempUnit(), Toast.LENGTH_LONG).show();
+        if (weatherPreference.getCityName() != null) {
+            cityNameTextView.setText(weatherPreference.getCityName());
+        }
+//        Toast.makeText(MainActivity.this, "OnCreate: " + weatherPreference.getTempUnit(), Toast.LENGTH_LONG).show();
         tempUnit = weatherPreference.getTempUnit();
 
         networkLibraryInitialize();
@@ -113,8 +123,12 @@ public class MainActivity extends AppCompatActivity {
                 WeatherForecaseResponse wfr = response.body();
                 ArrayList<WeatherList> weatherLists = new ArrayList<WeatherList>();
                 weatherLists = (ArrayList<WeatherList>) wfr.getList();
+//TODO: here to add list view
+                adapter = new ForcrastListAdapter(MainActivity.this, weatherLists);
+                forcrastListView.setAdapter(adapter);
                 for (WeatherList weatherList : weatherLists) {
-                    Log.d("ListResult", "onResponse: " + weatherList.getDt());
+                    Log.d("ListResult", "onResponse: " + weatherList.getDt() + " clouds " + weatherList.getClouds()
+                            + " getDeg " + weatherList.getDeg());
                 }
             }
 
@@ -127,7 +141,6 @@ public class MainActivity extends AppCompatActivity {
 
     private void getCurrentWeatherData() {
         String userUrl = "weather?q=" + cityName + "&units=" + tempUnit + Constant.ALP_KEY;
-        System.out.println(userUrl);
         Call<CurrentWeatherResponse> currentWeatherResponseCall = weatherServiceApi.getAllWeather(userUrl);
         currentWeatherResponseCall.enqueue(new Callback<CurrentWeatherResponse>() {
             @TargetApi(Build.VERSION_CODES.N)
@@ -143,7 +156,7 @@ public class MainActivity extends AppCompatActivity {
                 weatherSummaryTextView.setText(currentWeatherResponse.getWeather().get(0).getMain());
                 weatherDetailTextView.setText(currentWeatherResponse.getWeather().get(0).getDescription());
                 Picasso.with(getApplicationContext()).load(currentWeatherResponse.getWeather().get(0).getIcon()).into(skyImageView);
-                sunRiseTextView.setText("Surise " + String.valueOf(convertMilliToTime(currentWeatherResponse.getSys().getSunrise())));
+                sunRiseTextView.setText("Surise " + String.valueOf(fullTimeConvertMillis_to_Time(currentWeatherResponse.getSys().getSunrise())));
 //                sunSetTextView.setText("Sunset "+String.valueOf(convertMilliToTime(currentWeatherResponse.getSys().getSunset())));
                 sunSetTextView.setText("Sunset " + String.valueOf(fullTimeConvertMillis_to_Time(currentWeatherResponse.getSys().getSunset())));
                 //Toast.makeText(MainActivity.this, "Icon: "+currentWeatherResponse.getWeather().get(0).getIcon(), Toast.LENGTH_SHORT).show();
@@ -214,9 +227,15 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public String fullTimeConvertMillis_to_Time(long millis) {
-        Date date = new Date(millis);
-        SimpleDateFormat formatter = new SimpleDateFormat("HH:mm:ss");
-        String dateFormatted = formatter.format(date);
+//        SimpleDateFormat simpleDateFormat = new SimpleDateFormat("HH:mm:ss");
+        SimpleDateFormat simpleDateFormat = new SimpleDateFormat("hh:mm a");
+        simpleDateFormat.setTimeZone(TimeZone.getTimeZone("GMT+6"));
+        String convertedTime = simpleDateFormat.format(new Date(millis * 1000));
+
+//
+//        Date date = new Date(millis);
+//        SimpleDateFormat formatter = new SimpleDateFormat("HH:mm:ss");
+//        String dateFormatted = formatter.format(date);
 
 
 //        long ts = millis;
@@ -236,7 +255,7 @@ public class MainActivity extends AppCompatActivity {
 //        Date fromGmt = new Date(gmtTime.getTime() + TimeZone.getDefault().getOffset(localTime.getTime()));
 //        System.out.println("UTC time:" + gmtTime.toString() + "," + gmtTime.getTime() + " --> Local:"
 //                + fromGmt.toString() + "-" + fromGmt.getTime());
-        return dateFormatted;
+        return convertedTime;
     }
 
 
@@ -271,12 +290,16 @@ public class MainActivity extends AppCompatActivity {
 
                 if (cityEditText.getText().toString().isEmpty()) {
                     cityNameTextView.setText(citySpinner.getSelectedItem().toString());
+                    weatherPreference.setCityName(citySpinner.getSelectedItem().toString());
                     cityName = cityNameTextView.getText().toString();
                     getCurrentWeatherData();
+                    adapter.notifyDataSetChanged();
                 } else {
                     cityNameTextView.setText(cityEditText.getText().toString());
+                    weatherPreference.setCityName(citySpinner.getSelectedItem().toString());
                     cityName = cityNameTextView.getText().toString();
                     getCurrentWeatherData();
+                    adapter.notifyDataSetChanged();
                 }
             }
         });
